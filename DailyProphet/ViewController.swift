@@ -10,6 +10,8 @@ import SceneKit
 import ARKit
 
 class ViewController: UIViewController, ARSCNViewDelegate {
+    
+    var player = AVPlayer()
 
     @IBOutlet var sceneView: ARSCNView!
     
@@ -35,8 +37,6 @@ class ViewController: UIViewController, ARSCNViewDelegate {
             configuration.trackingImages = imageToTrack
             configuration.maximumNumberOfTrackedImages = 1
             
-            print("Images succesfully added")
-            
         }
 
         // Run the view's session
@@ -51,28 +51,67 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     }
 
     // MARK: - ARSCNViewDelegate
-    
-/*
-    // Override to create and configure nodes for anchors added to the view's session.
+       
     func renderer(_ renderer: SCNSceneRenderer, nodeFor anchor: ARAnchor) -> SCNNode? {
+        
         let node = SCNNode()
-     
+        
+        if let imageAnchor = anchor as? ARImageAnchor {
+            
+            let videoNode: SKVideoNode? = {
+                
+                guard let urlString = Bundle.main.path(forResource: "harrypotter", ofType: "mp4") else {
+                    
+                    return nil
+                    
+                }
+                
+                let url = URL(fileURLWithPath: urlString)
+                
+                let item = AVPlayerItem(url: url)
+                
+                player = AVPlayer(playerItem: item)
+                
+                return SKVideoNode(avPlayer: player)
+                
+            }()
+            
+            let videoScene = SKScene(size: CGSize(width: 480, height: 360))
+            
+            videoNode?.position = CGPoint(x: videoScene.size.width / 2, y: videoScene.size.height / 2)
+            
+            videoNode?.yScale = -1.0 //'-' will flip image rightside up
+            
+            videoScene.addChild(videoNode!)
+            
+            player.play()
+            
+            let plane = SCNPlane(width: imageAnchor.referenceImage.physicalSize.width, height: imageAnchor.referenceImage.physicalSize.height)
+            
+            // look at image file to determine its physical size so the plane is the same size as the image
+            
+            plane.firstMaterial?.diffuse.contents = videoScene
+            
+            let planeNode = SCNNode(geometry: plane)
+            
+            planeNode.eulerAngles.x = -.pi / 2
+            
+            node.addChildNode(planeNode)
+            
+            NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: player.currentItem, queue: nil)
+            
+            { notification in
+                
+                self.player.seek(to: CMTime.zero)
+                
+                self.player.play()
+                
+            }
+            
+        }
+        
         return node
-    }
-*/
-    
-    func session(_ session: ARSession, didFailWithError error: Error) {
-        // Present an error message to the user
         
     }
     
-    func sessionWasInterrupted(_ session: ARSession) {
-        // Inform the user that the session has been interrupted, for example, by presenting an overlay
-        
-    }
-    
-    func sessionInterruptionEnded(_ session: ARSession) {
-        // Reset tracking and/or remove existing anchors if consistent tracking is required
-        
-    }
 }
